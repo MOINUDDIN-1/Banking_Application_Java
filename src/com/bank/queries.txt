@@ -1,0 +1,135 @@
+1. Primary table
+
+CREATE TABLE account_holder (
+    customer_id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(255) NOT NULL,
+    password VARCHAR(50) NOT NULL,
+    account_number VARCHAR(20) UNIQUE NOT NULL,
+    email VARCHAR(50) NOT NULL,
+    account_balance DECIMAL(10,2) NOT NULL,
+    address VARCHAR(255) NOT NULL,
+    registered_date DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO account_holder (username, password, account_number, email, account_balance, address)
+VALUES
+    ('user1', 'password1', 'A123456789', 'john.doe@email.com', 5000.00, '123 Main St'),
+    ('user2', 'password2', 'B987654321', 'jane.smith@email.com', 8000.00, '456 Oak Ave'),
+    ('user3', 'password3', 'C567890123', 'bob.johnson@email.com', 3000.00, '789 Pine Rd');
+
+
+
+
+2. Beneficiary table 
+
+CREATE TABLE beneficiary (
+    beneficiary_id INT PRIMARY KEY AUTO_INCREMENT,
+    account_holder_id INT,
+    name VARCHAR(50) NOT NULL,
+    account_number VARCHAR(20) UNIQUE NOT NULL,
+    account_status VARCHAR(10) NOT NULL,
+    ifsc_code VARCHAR(20) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    max_transfer_amount DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (account_holder_id) REFERENCES account_holder(customer_id)
+);
+INSERT INTO beneficiary (account_holder_id, name, account_number, account_status, ifsc_code, email, max_transfer_amount)
+VALUES
+    (1, 'Friend 1', 'F123456789', 'Active', 'IFSC123', 'friend1@email.com', 2000.00),
+    (1, 'Friend 2', 'F987654321', 'Active', 'IFSC456', 'friend2@email.com', 3000.00),
+    (2, 'Family Member', 'F567890123', 'Active', 'IFSC789', 'family.member@email.com', 2500.00);
+
+
+3. Translations table
+
+CREATE TABLE transaction (
+    transaction_id VARCHAR(20) PRIMARY KEY,
+    account_holder_id INT,
+    beneficiary_id INT,
+    transferred_amount DECIMAL(10, 2) NOT NULL,
+    transaction_narration VARCHAR(50),
+    transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    transaction_status VARCHAR(50) NOT NULL,
+    FOREIGN KEY (account_holder_id) REFERENCES account_holder(customer_id),
+    FOREIGN KEY (beneficiary_id) REFERENCES beneficiary(beneficiary_id)
+);
+
+INSERT INTO transaction (account_holder_id, beneficiary_id, transferred_amount, transaction_narration, transaction_status)
+VALUES
+    (1, 1, 1000.00, 'Dinner with friends', 'Completed'),
+    (1, 2, 1500.00, 'Gift for friend', 'Completed'),
+    (2, 3, 2000.00, 'Family support', 'Pending');
+
+
+4. Registering a new user
+
+INSERT INTO account_holder (username, password, account_number, email, account_balance, address)
+VALUES
+    ('new_user', 'new_password', 'D111223344', 'new_user@email.com', 6000.00, '456 New St');
+
+
+5. Fetching largest customer_id  -- useful while creating new account
+
+SELECT MAX(customer_id) AS max_customer_id
+FROM account_holder;
+
+6. Fetching Balance
+
+SELECT account_balance
+FROM account_holder
+WHERE customer_id= 1;
+
+
+7. To transfer amount from my account to beneficiary
+
+-- Assuming your account_holder_id is 1 and beneficiary_id is 2
+-- You also need to specify the transferred amount and a unique transaction_id
+
+START TRANSACTION;
+
+-- Deduct amount from your account
+UPDATE account_holder
+SET account_balance = account_balance - <transferred_amount>
+WHERE customer_id = 1;
+
+-- Credit amount to the beneficiary's account
+UPDATE account_holder AS ah
+JOIN beneficiary AS b ON ah.customer_id = b.account_holder_id
+SET b.account_balance = b.account_balance + <transferred_amount>
+WHERE b.beneficiary_id = 2;
+
+-- Insert transaction record
+INSERT INTO transaction (transaction_id, account_holder_id, beneficiary_id, transferred_amount, transaction_narration, transaction_status)
+VALUES
+    ('<unique_transaction_id>', 1, 2, <transferred_amount>, 'Transfer to Beneficiary', 'Completed');
+
+COMMIT;
+
+8. SELECT MAX(transaction_id) AS max_transaction_id
+FROM transaction;
+
+9. Fetching All my Transactions
+
+SELECT *
+FROM transaction
+WHERE account_holder_id = 1;
+
+
+10. Adding Random amount to a user
+
+-- Assuming you want to add 1000.00 to the balance of the user with account number 'A123456789'
+UPDATE account_holder
+SET account_balance = account_balance + 1000.00
+WHERE customer_id = 'A123456789';
+
+11. login user
+
+-- Assuming you have a user with the account number 'A123456789' and  password stored in the database
+SELECT *
+FROM account_holder
+WHERE account_number = 'A123456789' AND password = 'password';
+
+
+
+
+
